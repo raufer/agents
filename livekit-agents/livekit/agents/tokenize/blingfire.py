@@ -4,9 +4,13 @@ import functools
 import re
 from dataclasses import dataclass
 
-from livekit import blingfire
-
+from .. import _native
 from . import token_stream, tokenizer
+
+try:
+    from livekit import blingfire
+except ImportError:  # no wheel for this Python yet
+    blingfire = None  # type: ignore[assignment]
 
 __all__ = [
     "SentenceTokenizer",
@@ -21,6 +25,9 @@ def _split_sentences(
 ) -> list[tuple[str, int, int]]:
     if not text or not text.strip():
         return []
+
+    if blingfire is None:
+        raise _native.missing("livekit-blingfire")
 
     _, offsets = blingfire.text_to_sentences_with_offsets(text)
 

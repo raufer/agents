@@ -24,12 +24,17 @@ from typing import Literal
 import numpy as np
 
 from livekit import rtc
-from livekit.local_inference import VAD as _NativeVAD, VAD_WINDOW_SAMPLES
 
-from .. import utils, vad
+from .. import _native, utils, vad
 from ..log import logger
 from ..types import NOT_GIVEN, NotGivenOr
 from ..utils import is_given
+
+try:
+    from livekit.local_inference import VAD as _NativeVAD, VAD_WINDOW_SAMPLES
+except ImportError:  # no wheel for this Python yet
+    _NativeVAD = None  # type: ignore[assignment, misc]
+    VAD_WINDOW_SAMPLES = 0
 
 SLOW_INFERENCE_THRESHOLD = 0.2  # late by 200ms
 _MODEL_SAMPLE_RATE = 16000
@@ -145,6 +150,9 @@ class VAD(vad.VAD):
 
 class _VADStream(vad.VADStream):
     def __init__(self, parent: VAD, opts: _VADOptions, *, executor: Executor | None) -> None:
+        if _NativeVAD is None:
+            raise _native.missing("livekit-local-inference")
+
         super().__init__(parent)
         self._opts = opts
         self._owns_executor = executor is None
@@ -218,7 +226,6 @@ class _VADStream(vad.VADStream):
 
     @utils.log_exceptions(logger=logger)
     async def _main_task(self) -> None:
-
         # "pub_" means public, these values are exposed to the users through events
         pub_speaking = False
         pub_speech_duration = 0.0

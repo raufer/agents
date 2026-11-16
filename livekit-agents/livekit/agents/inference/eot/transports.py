@@ -13,7 +13,6 @@ import numpy as np
 from google.protobuf.timestamp_pb2 import Timestamp
 
 from livekit import rtc
-from livekit.local_inference import EOT as _EOT, EOT_MAX_SAMPLES
 from livekit.protocol.agent_pb.agent_inference import (
     AUDIO_ENCODING_PCM_S16LE,
     ClientMessage,
@@ -32,7 +31,7 @@ from livekit.protocol.agent_pb.agent_session import (
     ChatRole as ProtoChatRole,
 )
 
-from ... import utils
+from ... import _native, utils
 from ..._exceptions import (
     APIConnectionError,
     APIError,
@@ -53,6 +52,12 @@ from .base import (
     _BaseStreamingTurnDetectorStream,
     _StreamingTurnDetectionTransport,
 )
+
+try:
+    from livekit.local_inference import EOT as _EOT, EOT_MAX_SAMPLES
+except ImportError:  # no wheel for this Python yet
+    _EOT = None  # type: ignore[assignment, misc]
+    EOT_MAX_SAMPLES = 0
 
 if TYPE_CHECKING:
     from .detector import TurnDetector
@@ -422,6 +427,9 @@ class _LocalTransport:
     """In-process ctypes transport for `turn-detector-v1-mini`."""
 
     def __init__(self, *, opts: TurnDetectorOptions) -> None:
+        if _EOT is None:
+            raise _native.missing("livekit-local-inference")
+
         self._opts = opts
         self._buf = utils.AudioArrayBuffer(
             buffer_size=EOT_MAX_SAMPLES, sample_rate=DEFAULT_SAMPLE_RATE

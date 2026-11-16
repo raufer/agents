@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from typing import Literal, cast
 
-from livekit.local_inference import EOT_THRESHOLDS
-
+from ... import _native
 from ..._exceptions import APIError
 from ...language import LanguageCode
 from ...types import NOT_GIVEN, NotGivenOr
 from ...utils.misc import is_given
+
+try:
+    from livekit.local_inference import EOT_THRESHOLDS
+except ImportError:  # no wheel for this Python yet
+    EOT_THRESHOLDS = {}
 
 LOCAL_LANGUAGES: dict[str, float] = dict(EOT_THRESHOLDS)
 
@@ -40,6 +44,8 @@ class ThresholdOptions:
         self._server_thresholds: dict[str, float] | None = None
         self._server_default: float | None = None
         if model == "turn-detector-v1-mini":
+            if not LOCAL_LANGUAGES:
+                raise _native.missing("livekit-local-inference")
             self._server_thresholds = dict(LOCAL_LANGUAGES)
             self._server_default = LOCAL_LANGUAGES["en"]
 
@@ -138,6 +144,8 @@ class ThresholdOptions:
     def _to_local_fallback(self) -> None:
         if self._model == "turn-detector-v1-mini":
             return
+        if not LOCAL_LANGUAGES:
+            raise _native.missing("livekit-local-inference")
 
         rescaled: dict[str, float] | None = None
         if server := self._server_thresholds:

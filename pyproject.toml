@@ -1,4 +1,7 @@
 [tool.uv]
+# The workspace locks below 3.15 until its plugins' native dependencies (onnxruntime, ...)
+# ship cp315 wheels; livekit-agents itself admits 3.15.
+environments = ["python_full_version < '3.15'"]
 constraint-dependencies = ['onnxruntime<1.24; python_version < "3.11"']
 default-groups = ["dev", "typing"]
 # Universal resolution only checks that a wheel exists for the Python version.
